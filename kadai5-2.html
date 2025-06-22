@@ -6,15 +6,41 @@
 <body>
     <h1 id="msg">何かのAPI</h1>
     <form name="apiform"><p>
-        何かのフォーム：<input type="text" name="form_data">
+        場所を入力：<input type="text" name="form_data">
         <button type="button" id="btn1" onclick="some_api(this.form)">実行</button>
     </p></form>
     
     <div id="result"></div>
     <script>
         async function some_api(myForm) {
-            // ここにコードを書く
-            document.getElementById("result").innerHTML += myForm.form_data.value+"<br />";
+            const city = myForm.form_data.value;
+            const endpoint = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city);
+
+            try {
+                const geoRes = await fetch(endpoint);
+                const geoData = await geoRes.json();
+
+                if (!geoData.results || geoData.results.length === 0) {
+                    document.getElementById("result").innerHTML = "都市が見つかりませんでした。";
+                    return;
+                }
+
+                const { latitude, longitude } = geoData.results[0];
+                const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`;
+
+                const weatherRes = await fetch(weatherUrl);
+                const weatherData = await weatherRes.json();
+
+                const weather = weatherData.current_weather;
+                const output = `都市（${city}）<br>
+                                気温：${weather.temperature}℃<br>
+                                風速：${weather.windspeed} km/h`;
+
+                document.getElementById("result").innerHTML = output;
+            } catch (error) {
+                document.getElementById("result").innerHTML = "エラーが発生しました：" + error;
+            }
+
             document.apiform.reset();
         }
     </script>
